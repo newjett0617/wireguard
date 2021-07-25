@@ -1,4 +1,4 @@
-version: "3"
+version: "2.1"
 
 x-basic-setting: &basic-setting
   init: true
@@ -9,36 +9,38 @@ x-basic-setting: &basic-setting
       max-size: "2G"
       max-file: "2"
       compress: "true"
-  healthcheck:
-    test: [ "CMD-SHELL", "curl --fail http://localhost" ]
-    interval: 30s
-    timeout: 30s
-    start_period: 10s
-    retries: 3
-
-volumes:
-  my-volume:
-    name: my-volume
-    driver: local
 
 networks:
-  my-network:
-    name: my-network
+  wireguard:
+    name: wireguard
     driver: bridge
-    internal: true
 
 services:
-  my-app:
+  wireguard:
     <<: *basic-setting
-    image: docker.io/library/nginx:alpine
-    container_name: my-app
+    image: docker.io/linuxserver/wireguard:latest
+    container_name: wireguard
     networks:
-      - my-network
+      - wireguard
     expose:
-      - 80
+      - 51820/udp
     ports:
-      - 80:80
+      - 0.0.0.0:51820:51820/udp
     environment:
-      - foo=bar
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Taipei
+     #- SERVERURL=wireguard.domain.com #option
+      - SERVERPORT=51820 #optional
+      - PEERS=pc,phone #optional
+      - PEERDNS=auto #optional
+      - INTERNAL_SUBNET=10.13.13.0 #optional
+      - ALLOWEDIPS=0.0.0.0/0 #optional
     volumes:
-      - my-volume:/etc/nginx:rw
+      - ./config:/config:rw
+      - /lib/modules:/lib/modules:rw
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
